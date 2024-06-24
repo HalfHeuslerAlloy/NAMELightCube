@@ -6,7 +6,7 @@
 
 
 #define outputPin 5
-#define clkPin 1
+#define clkPin 16
 #define loadPin 4
 
 #define layerSelA 6
@@ -14,30 +14,31 @@
 #define layerSelC 8
 #define layerSelD 9
 #define layerSelE 10
+#define layerSelF 11
 
 
 //Cube data pins
 #define dataPin1 2
 
 // Define the 1 frames, each 24 by 24 by 32 pixels and 3 colors deep
-bool frame[16][16][16][3] = {false};
+bool frame[8][8][32][3] = {false};
 
 void OutputFrame(){
 
     uint32_t led = 0;
 
-    const int ColSeq[3] = {2,1,0};
+    const int ColSeq[3] = {1,2,0};
     int c;
 
     while(1){
     
 
-    for(int k = 0; k < 16; k++){
+    for(int k = 0; k < 32; k++){
 
         // Load new layer data into the shift registers
         for(int cn = 0; cn < 3; cn++){
-        for(int j = 0; j < 16; j++){
-            for(int i = 0; i < 16; i++){
+        for(int j = 0; j <8; j++){
+            for(int i = 0; i < 8; i++){
 
                 c = ColSeq[cn];
 
@@ -73,6 +74,16 @@ void OutputFrame(){
 
         if( (k & 0b00001000) != 0 ) {gpio_put(layerSelD,1);}
                                 else{gpio_put(layerSelD,0);}
+
+        // slightly different because disabling and enabling multiplexer IO chips
+        if( (k & 0b00010000) != 0 ){
+            gpio_put(layerSelE,0);
+            gpio_put(layerSelF,1);
+        }
+        else{
+            gpio_put(layerSelE,1);
+            gpio_put(layerSelF,0);
+        }
 
         //Pulse load pin to move inputted data to display out
         gpio_put(loadPin,1);
@@ -121,6 +132,8 @@ int main() {
     gpio_set_dir(layerSelD, GPIO_OUT);
     gpio_init(layerSelE);
     gpio_set_dir(layerSelE, GPIO_OUT);
+    gpio_init(layerSelF);
+    gpio_set_dir(layerSelF, GPIO_OUT);
 
     gpio_put(clkPin,0);
     gpio_put(loadPin,0);
@@ -131,6 +144,7 @@ int main() {
     gpio_put(layerSelC,0);
     gpio_put(layerSelD,0);
     gpio_put(layerSelE,0);
+    gpio_put(layerSelF,0);
 
 
     //Start the display
@@ -154,9 +168,9 @@ int main() {
         // This character should not appear in normal update commands
         if(0b01111111 == ch0){
             // Clear whole cube command
-            for(int k = 0; k < 16; k++){
-                for(int j = 0; j < 16; j++){
-                    for(int i = 0; i < 16; i++){
+            for(int k = 0; k < 8; k++){
+                for(int j = 0; j < 8; j++){
+                    for(int i = 0; i < 32; i++){
                         frame[i][j][k][0] = false;
                         frame[i][j][k][1] = false;
                         frame[i][j][k][2] = false;
@@ -173,7 +187,7 @@ int main() {
 
             i = ch0 & 0b00001111;
             j = ch1 & 0b00001111;
-            k = ch2 & 0b00001111;
+            k = ch2 & 0b00011111;
 
             frame[i][j][k][0] = ch0>>5 & 0b00000001;
             frame[i][j][k][1] = ch1>>5 & 0b00000001;

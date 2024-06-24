@@ -7,6 +7,7 @@ Created on Mon Feb 19 15:38:58 2024
 
 import serial
 import serial.tools.list_ports
+import pixelFont
 
 import numpy as np
 import tkinter as tk
@@ -29,9 +30,8 @@ SurfaceOnly = False
 
 
 # cube is always 1 unit
-LightN = [24,24,32]
-LightCube = np.zeros([LightN[0],LightN[1],LightN[2],3],dtype="bool") # cube N*N*N*3 RGB
-DrawPriority = np.zeros([LightN[0],LightN[1],LightN[2]],dtype="byte")
+LightCubeSizes = [[8,8,32],[16,16,16],[24,24,32]]
+
 
 #Time step
 dT = 0.025
@@ -194,14 +194,14 @@ class Window(tk.Frame):
         Initial setup of widgets and the general window position
         """
         
+        global SimConfig, cubePort, LightN
+        
         self.PipeRecv, self.PipeSend = Pipe(duplex=True)
         
-        self.Worker = Process(target=commControlThread, args=(CommPortID,self.PipeSend))
+        self.Worker = Process(target=commControlThread, args=(CommPortID,self.PipeSend,LightN))
         self.Worker.start()
         
         print("started comm worker")
-        
-        global SimConfig, cubePort
         
         self.master = master
         
@@ -674,11 +674,9 @@ class Window(tk.Frame):
 #####################################################
 #####################################################
 
-def commControlThread(CommPortID,Pipe):
-    
+def commControlThread(CommPortID,Pipe,LightN):
     
     # cube is always 1 unit
-    LightN = [24,24,32]
     LightCube = np.zeros([LightN[0],LightN[1],LightN[2],3],dtype="bool") # cube N*N*N*3 RGB
     LightCubeOld = np.copy(LightCube)
     DrawPriority = np.zeros([LightN[0],LightN[1],LightN[2]],dtype="byte")
@@ -858,6 +856,10 @@ def drawLineCube(P1,P2,Col,DrawPri):
             
                 DrawPriority[i,j,k] = DrawPri
 
+
+def textScroll(Text,LightCube,LightN):
+    pass
+
 ################################################
 ################################################            
 
@@ -919,7 +921,7 @@ def getUpdatedVoxels(NewFrame,OldFrame):
                                 NewFrame[i,j,k,2] << 5 |
                                 k)
     return UpdatePacket
-    
+
 
 if __name__=="__main__":
     
@@ -945,6 +947,16 @@ if __name__=="__main__":
     except:
         CommPortID = None
         print("Could not connect to THE CUBE")
+    
+    try:
+        sizeSelection = int(input("Select Size: 1:{8,8,32}, 2:{16,16,16}, 3:{24,24,32} : "))
+        
+        LightN = LightCubeSizes[sizeSelection - 1]
+        LightCube = np.zeros([LightN[0],LightN[1],LightN[2],3],dtype="bool") # cube N*N*N*3 RGB
+        DrawPriority = np.zeros([LightN[0],LightN[1],LightN[2]],dtype="byte")
+    except:
+        print("Failed to select a cube size")
+        raise
         
     #load the elements
     Elements = loadTable(PeriodicTablefFile)
