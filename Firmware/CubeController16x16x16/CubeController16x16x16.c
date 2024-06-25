@@ -59,7 +59,7 @@ void OutputFrame(){
 
         //Turn off output while setting layer selector pins
         gpio_put(outputPin,1);
-        busy_wait_at_least_cycles(10);
+        busy_wait_at_least_cycles(50);
 
         //Configure vertical column pins selection
         if( (k & 0b00000001) != 0 ) {gpio_put(layerSelA,1);}
@@ -78,6 +78,8 @@ void OutputFrame(){
         gpio_put(loadPin,1);
         busy_wait_at_least_cycles(10);
         gpio_put(loadPin,0);
+
+        busy_wait_at_least_cycles(50);
 
         // Enable output again
         gpio_put(outputPin,0);

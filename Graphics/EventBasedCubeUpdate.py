@@ -10,9 +10,17 @@ import time
 import serial
 import serial.tools.list_ports
 
+import pixelFont
+
+import matplotlib.pyplot as plt
+
 packet = ""
 
 cubeSize = [24,24,32]
+
+cube = None
+oldCube = None
+cubePort = None
 
 def getUpdatedVoxels(NewFrame,OldFrame):
     Diff = np.bitwise_xor(NewFrame,OldFrame)
@@ -47,10 +55,19 @@ def getUpdatedVoxels(NewFrame,OldFrame):
                                 NewFrame[i,j,k,2] << 5 |
                                 k)
     return UpdatePacket
+
+
+def updateCube():
+    global cube, oldCube, cubePort
+    packet = getUpdatedVoxels(cube, oldCube)
+    if cubePort != None:
+        cubePort.write(bytearray(packet,'utf-8'))
+    
     
 def testSpeed(commPortID):
     
     global packet,cubeSize
+    global cube, oldCube, cubePort
     
     try:
         cubePort = serial.Serial("COM"+str(CommPortID),115200)
@@ -94,10 +111,26 @@ def testSpeed(commPortID):
     Col = 0
     
     while(True):
-        cube[:,:,:,:] = False
-        if cubeSize[0] == 24:
-            cube[:,:,0,0] = gridPattern
-        cube[:,:,N,Col] = True
+        
+        Str = input("next line: ")
+        
+        if len(Str) > 0:
+            N = 0
+            Col = 0
+            cube[:,:,:,:] = False
+            textScroll(Str,[1,0,0],cube,cubeSize,1)
+        else:
+            cube[:,:,:,:] = False
+            if cubeSize[0] == 24:
+                cube[:,:,0,0] = gridPattern
+            cube[:,:,N,Col] = True
+            
+            N += 1
+            
+            if N>cubeSize[2]-1:
+                N = 0
+                Col = (Col + 1)%3
+            
         
         start = time.perf_counter()
         
@@ -116,15 +149,66 @@ def testSpeed(commPortID):
         
         print("Packet Send Time {}".format(stop-start))
         
-        N += 1
-        
-        if N>cubeSize[2]-1:
-            N = 0
-            Col = (Col + 1)%3
-        
-        Str = input("next line")
-        
         oldCube = np.copy(cube)
+
+
+def textScroll(Text,Colour,LightCube,LightN,Scale):
+    global cube, oldCube, cubePort
+    for Pos in range(-10*len(Text)*Scale,LightN[0]*4):
+        cube = textDraw(Text,[1,0,0],LightCube,[16,16,16],Pos,1)
+        updateCube()
+        time.sleep(0.05)
+        oldCube = np.copy(cube)
+
+        
+
+
+def textDraw(Text,Colour,LightCube,LightN,Pos,Scale):
+    # Path: [0,0] -> [N,0] -> [N,N] -> [N,0] -> [0,0]
+    Pathx = list(range(0,LightN[0]-1)) + (LightN[0]-1)*[LightN[0]-1] + list(range(LightN[0]-1,0,-1)) + (LightN[0]-1)*[0]
+    Pathy = (LightN[0]-1)*[0] + list(range(0,LightN[0]-1)) + (LightN[0]-1)*[LightN[0]-1] + list(range(LightN[0]-1,0,-1))
+    
+    for Tn in range(len(Text)):
+        Chr = Text[len(Text) - Tn - 1]
+        FontMap = pixelFont.font8x8_basic[ord(Chr)]
+        
+        for i in range(8):
+            
+            # Calculate position along path
+            Pathn = (Tn * 10 + i ) * Scale + Pos
+            
+            if Pathn < 0 or Pathn > len(Pathx) - 1:
+                continue
+            
+            Lx = Pathx[Pathn]
+            Ly = Pathy[Pathn]
+            
+            for j in range(8):
+                LED = bool( FontMap[7-j] & (1 << (7-i)) ) #get i'th,j'th pixel
+                
+                LightCube[Lx,Ly,j*Scale,0] = LED & Colour[0]
+                LightCube[Lx,Ly,j*Scale,1] = LED & Colour[1]
+                LightCube[Lx,Ly,j*Scale,1] = LED & Colour[2]
+    
+    
+    return LightCube
+
+def plotCube(LightCube):
+    
+    voxelarray = LightCube[:,:,:,0] | LightCube[:,:,:,1] | LightCube[:,:,:,2]
+    
+    colors = np.empty(voxelarray.shape, dtype=object)
+    colors[LightCube[:,:,:,0]] = 'red'
+    colors[LightCube[:,:,:,1]] = 'green'
+    colors[LightCube[:,:,:,2]] = 'blue'
+
+    # and plot everything
+    ax = plt.figure().add_subplot(projection='3d')
+    ax.voxels(voxelarray, facecolors=colors)
+
+    plt.show()
+                
+        
 
 if __name__=="__main__":
     try:

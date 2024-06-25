@@ -215,6 +215,8 @@ class Window(tk.Frame):
         
         self.SimRunning = False
         
+        self.IdleTime = time.perf_counter()
+        
         self.Draw = tk.Canvas(master,width=self.Size,height=self.Size)
         self.Draw.grid(column = 0, row = 0,rowspan=2)
         
@@ -555,6 +557,7 @@ class Window(tk.Frame):
         
             
         self.after(5,self.update)
+        
     
     def drawFilmBoundary(self):
         
@@ -857,8 +860,44 @@ def drawLineCube(P1,P2,Col,DrawPri):
                 DrawPriority[i,j,k] = DrawPri
 
 
-def textScroll(Text,LightCube,LightN):
-    pass
+################################################
+################################################
+
+def textScroll(LightCube,LightN):
+    
+    for Pos in range(50,-50,-1):
+        LightCube = np.zeros([16,16,16,3],dtype='bool')
+        textDraw(">NAME<",[1,0,0],LightCube,[16,16,16],Pos,1)
+
+def textDraw(Text,Colour,LightCube,LightN,Pos,Scale):
+    # Path: [0,0] -> [N,0] -> [N,N] -> [N,0] -> [0,0]
+    Pathx = list(range(0,LightN[0]-1)) + (LightN[0]-1)*[LightN[0]-1] + list(range(LightN[0]-1,0,-1)) + (LightN[0]-1)*[0]
+    Pathy = (LightN[0]-1)*[0] + list(range(0,LightN[0]-1)) + (LightN[0]-1)*[LightN[0]-1] + list(range(LightN[0]-1,0,-1))
+    
+    for Tn in range(len(Text)):
+        Chr = Text[Tn]
+        FontMap = pixelFont.font8x8_basic[ord(Chr)]
+        
+        for i in range(8):
+            
+            # Calculate position along path
+            Pathn = (Tn * 10 + i ) * Scale + Pos
+            
+            if Pathn < 0 or Pathn > len(Pathx) - 1:
+                continue
+            
+            Lx = Pathx[Pathn]
+            Ly = Pathy[Pathn]
+            
+            for j in range(8):
+                LED = bool( FontMap[7-j] & (1 << i) ) #get i'th,j'th pixel
+                
+                LightCube[Lx,Ly,j*Scale,Colour[0]] = LED
+                LightCube[Lx,Ly,j*Scale,Colour[1]] = LED
+                LightCube[Lx,Ly,j*Scale,Colour[2]] = LED
+    
+    
+    return LightCube
 
 ################################################
 ################################################            
