@@ -747,6 +747,8 @@ class Window(tk.Frame):
 
 def commControlThread(CommPortID,Pipe,LightN):
     
+    global SurfaceOnly
+    
     # cube is always 1 unit
     LightCube = np.zeros([LightN[0],LightN[1],LightN[2],3],dtype="bool") # cube N*N*N*3 RGB
     LightCubeOld = np.copy(LightCube)
@@ -768,6 +770,9 @@ def commControlThread(CommPortID,Pipe,LightN):
         while True:
             message = Pipe.recv()
             
+    # Text scrolling
+    currentText = ""
+    textPos = 0
     
     while True:
         if Pipe.poll():
@@ -778,6 +783,8 @@ def commControlThread(CommPortID,Pipe,LightN):
                     cubePort.write(bytearray(chr(0b11100001),'utf-8'))
                     LightCube = np.zeros([LightN[0],LightN[1],LightN[2],3],dtype="bool") # cube N*N*N*3 RGB
                     LightCubeOld = np.copy(LightCube)
+                if message[0:6] == "#Print":
+                    CurrentText = message[7:]
             if type(message) == list:
                 Particles = message
         
@@ -803,51 +810,11 @@ def outputCube(Particles,LightCube,LightN,DrawPriority):
     
     surfacelayer = int( SimConfig["Film_Thickness"] * LightN[2] )
     
+    LightCube = boundaryBox(LightCube, surfacelayer)
     
-    if SurfaceOnly:
-        LightCube[:,:,surfacelayer,0] = True
-        LightCube[:,:,surfacelayer,1] = True
-        LightCube[:,:,surfacelayer,2] = False
-    else:
-        LightCube[:,:,surfacelayer,0] = True
-        LightCube[:,:,surfacelayer,1] = True
-        LightCube[:,:,surfacelayer,2] = False
-        
-        # LightCube[:,:,0,0] = True
-        # LightCube[:,:,0,1] = True
-        # LightCube[:,:,0,2] = False
-        
-        LightCube[0,0,:surfacelayer,0] = True
-        LightCube[0,0,:surfacelayer,1] = True
-        LightCube[0,0,:surfacelayer,2] = False
-        
-        LightCube[0,-1,:surfacelayer,0] = True
-        LightCube[0,-1,:surfacelayer,1] = True
-        LightCube[0,-1,:surfacelayer,2] = False
-        
-        LightCube[-1,0,:surfacelayer,0] = True
-        LightCube[-1,0,:surfacelayer,1] = True
-        LightCube[-1,0,:surfacelayer,2] = False
-        
-        LightCube[-1,-1,:surfacelayer,0] = True
-        LightCube[-1,-1,:surfacelayer,1] = True
-        LightCube[-1,-1,:surfacelayer,2] = False
-        
-        LightCube[:,0,0,0] = True
-        LightCube[:,0,0,1] = True
-        LightCube[:,0,0,2] = False
-        
-        LightCube[:,-1,0,0] = True
-        LightCube[:,-1,0,1] = True
-        LightCube[:,-1,0,2] = False
-        
-        LightCube[0,:,0,0] = True
-        LightCube[0,:,0,1] = True
-        LightCube[0,:,0,2] = False
-        
-        LightCube[-1,:,0,0] = True
-        LightCube[-1,:,0,1] = True
-        LightCube[-1,:,0,2] = False
+    Pattern = "center"
+    
+    LightCube = entryPointMarker(LightCube, surfacelayer, Pattern)
     
     for P in Particles:
         Pos = np.copy(P.Pos)
@@ -928,29 +895,115 @@ def drawLineCube(P1,P2,Col,DrawPri):
             
                 DrawPriority[i,j,k] = DrawPri
 
-
-################################################
-################################################
-
-def textScroll(LightCube,LightN):
+def boundaryBox(LightCube, surfacelayer):
     
-    for Pos in range(50,-50,-1):
-        LightCube = np.zeros([16,16,16,3],dtype='bool')
-        textDraw(">NAME<",[1,0,0],LightCube,[16,16,16],Pos,1)
+    global SurfaceOnly
+    
+    if SurfaceOnly:
+        LightCube[:,:,surfacelayer,0] = True
+        LightCube[:,:,surfacelayer,1] = True
+        LightCube[:,:,surfacelayer,2] = False
+    else:
+        LightCube[:,:,surfacelayer,0] = True
+        LightCube[:,:,surfacelayer,1] = True
+        LightCube[:,:,surfacelayer,2] = False
+        
+        # LightCube[:,:,0,0] = True
+        # LightCube[:,:,0,1] = True
+        # LightCube[:,:,0,2] = False
+        
+        LightCube[0,0,:surfacelayer,0] = True
+        LightCube[0,0,:surfacelayer,1] = True
+        LightCube[0,0,:surfacelayer,2] = False
+        
+        LightCube[0,-1,:surfacelayer,0] = True
+        LightCube[0,-1,:surfacelayer,1] = True
+        LightCube[0,-1,:surfacelayer,2] = False
+        
+        LightCube[-1,0,:surfacelayer,0] = True
+        LightCube[-1,0,:surfacelayer,1] = True
+        LightCube[-1,0,:surfacelayer,2] = False
+        
+        LightCube[-1,-1,:surfacelayer,0] = True
+        LightCube[-1,-1,:surfacelayer,1] = True
+        LightCube[-1,-1,:surfacelayer,2] = False
+        
+        LightCube[:,0,0,0] = True
+        LightCube[:,0,0,1] = True
+        LightCube[:,0,0,2] = False
+        
+        LightCube[:,-1,0,0] = True
+        LightCube[:,-1,0,1] = True
+        LightCube[:,-1,0,2] = False
+        
+        LightCube[0,:,0,0] = True
+        LightCube[0,:,0,1] = True
+        LightCube[0,:,0,2] = False
+        
+        LightCube[-1,:,0,0] = True
+        LightCube[-1,:,0,1] = True
+        LightCube[-1,:,0,2] = False
+    
+    return LightCube
+
+def entryPointMarker(LightCube, Surfacelayer, Pattern):
+    
+    LightN = LightCube.shape[0]
+    
+    if Pattern == "center":
+        Half = int(LightN/2)
+        #RGB - Blue
+        LightCube[Half,Half,Surfacelayer,0] = False
+        LightCube[Half,Half,Surfacelayer,1] = False
+        LightCube[Half,Half,Surfacelayer,2] = True
+        
+        LightCube[Half+1,Half,Surfacelayer,0] = False
+        LightCube[Half+1,Half,Surfacelayer,1] = False
+        LightCube[Half+1,Half,Surfacelayer,2] = True
+        
+        LightCube[Half,Half+1,Surfacelayer,0] = False
+        LightCube[Half,Half+1,Surfacelayer,1] = False
+        LightCube[Half,Half+1,Surfacelayer,2] = True
+        
+        LightCube[Half+1,Half+1,Surfacelayer,0] = False
+        LightCube[Half+1,Half+1,Surfacelayer,1] = False
+        LightCube[Half+1,Half+1,Surfacelayer,2] = True
+    
+    return LightCube
+
+
+################################################
+################################################
+
+def textScroll(Text,Colour,LightCube,LightN,Scale):
+    global cube, oldCube, cubePort
+    for Pos in range(-9*(len(Text))*Scale,LightN[0]*4):
+        LightCube = textDraw(Text,[1,0,0],LightCube,[16,16,16],Pos,Scale)
+        time.sleep(0.05)
+        oldCube = np.copy(cube)
+    return LightCube
+
+        
+
 
 def textDraw(Text,Colour,LightCube,LightN,Pos,Scale):
     # Path: [0,0] -> [N,0] -> [N,N] -> [N,0] -> [0,0]
     Pathx = list(range(0,LightN[0]-1)) + (LightN[0]-1)*[LightN[0]-1] + list(range(LightN[0]-1,0,-1)) + (LightN[0]-1)*[0]
     Pathy = (LightN[0]-1)*[0] + list(range(0,LightN[0]-1)) + (LightN[0]-1)*[LightN[0]-1] + list(range(LightN[0]-1,0,-1))
     
+    if LightN[0] != 16:
+        temp = Pathy
+        Pathy = Pathx
+        Pathx = temp
+    
     for Tn in range(len(Text)):
-        Chr = Text[Tn]
+        Chr = Text[len(Text) - Tn - 1]
         FontMap = pixelFont.font8x8_basic[ord(Chr)]
         
-        for i in range(8):
+        for i in range(int(8*Scale)):
             
             # Calculate position along path
-            Pathn = (Tn * 10 + i ) * Scale + Pos
+            Pathn = (Tn * 9 * Scale + i ) + Pos
             
             if Pathn < 0 or Pathn > len(Pathx) - 1:
                 continue
@@ -958,12 +1011,16 @@ def textDraw(Text,Colour,LightCube,LightN,Pos,Scale):
             Lx = Pathx[Pathn]
             Ly = Pathy[Pathn]
             
-            for j in range(8):
-                LED = bool( FontMap[7-j] & (1 << i) ) #get i'th,j'th pixel
+            for j in range(int(8*Scale)):
                 
-                LightCube[Lx,Ly,j*Scale,Colour[0]] = LED
-                LightCube[Lx,Ly,j*Scale,Colour[1]] = LED
-                LightCube[Lx,Ly,j*Scale,Colour[2]] = LED
+                fx = int(i / Scale)
+                fy = int(j / Scale)
+                
+                LED = bool( FontMap[7-fy] & (1 << (7-fx)) ) #get i'th,j'th pixel
+                
+                LightCube[Lx,Ly,j,0] = LED & Colour[0]
+                LightCube[Lx,Ly,j,1] = LED & Colour[1]
+                LightCube[Lx,Ly,j,1] = LED & Colour[2]
     
     
     return LightCube
