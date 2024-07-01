@@ -308,6 +308,27 @@ class Window(tk.Frame):
         self.GetSetupInfo()
         
         
+        #############################
+        #### Keypad bindings ########
+        #############################
+        
+        master.bind("1",self.KeypadPredefined)
+        master.bind("2",self.KeypadPredefined)
+        master.bind("3",self.KeypadPredefined)
+        master.bind("4",self.KeypadPredefined)
+        master.bind("5",self.KeypadPredefined)
+        master.bind("6",self.KeypadPredefined)
+        master.bind("7",self.KeypadPredefined)
+        master.bind("8",self.KeypadPredefined)
+        master.bind("9",self.KeypadPredefined)
+        
+        master.bind("<Return>",self.fireSim)
+        master.bind("<space>",self.haltSim)
+        master.bind("<BackSpace>",self.clearSim)
+        
+        master.bind("a",self.annealSim)
+        
+        #############################
         
         self.PreviosTime = time.time()
         self.Steps = 0
@@ -371,7 +392,7 @@ class Window(tk.Frame):
         self.drawParticles()
     
     
-    def fireSim(self):
+    def fireSim(self, event=None):
         
         self.clearSim()
         
@@ -382,13 +403,13 @@ class Window(tk.Frame):
         self.SimRunning = True
         print("Firing Ions")
     
-    def haltSim(self):
+    def haltSim(self, event = None):
         
         self.SimRunning = False
         self.AnnealStopEarly = True
         print("Stop Simulation")
     
-    def clearSim(self):
+    def clearSim(self, event = None):
         
         global cubePort
         
@@ -402,7 +423,7 @@ class Window(tk.Frame):
         
         self.PipeRecv.send("#Clear")
     
-    def annealSim(self):
+    def annealSim(self, event = None):
         
         self.haltSim()
         
@@ -482,7 +503,7 @@ class Window(tk.Frame):
                                                             Element[3]
                                                             )
         
-    def KeypadPredefined(self):
+    def KeypadPredefined(self,event=None):
         """
         Sets the mass and energy toi predefined values
 
@@ -491,7 +512,43 @@ class Window(tk.Frame):
         None.
 
         """
-        pass
+        
+        #SpeedScale range 5 - 40
+        #MassScale range 4-118
+        
+        Mass1 = 15 # Phosphor
+        Mass2 = 25 # Manganese
+        Mass3 = 50 # Tin
+        
+        if event.char == "1":
+            self.SpeedScale.set(1)
+            self.MassScale.set(Mass1)
+        elif event.char == "2":
+            self.SpeedScale.set(20)
+            self.MassScale.set(Mass1)
+        elif event.char == "3":
+            self.SpeedScale.set(80)
+            self.MassScale.set(Mass1)
+        elif event.char == "4":
+            self.SpeedScale.set(1)
+            self.MassScale.set(Mass2)
+        elif event.char == "5":
+            self.SpeedScale.set(20)
+            self.MassScale.set(Mass2)
+        elif event.char == "6":
+            self.SpeedScale.set(40)
+            self.MassScale.set(Mass2)
+        elif event.char == "7":
+            self.SpeedScale.set(1)
+            self.MassScale.set(Mass3)
+        elif event.char == "8":
+            self.SpeedScale.set(20)
+            self.MassScale.set(Mass3)
+        elif event.char == "9":
+            self.SpeedScale.set(40)
+            self.MassScale.set(Mass3)
+            
+        
         
     
     def update(self):
