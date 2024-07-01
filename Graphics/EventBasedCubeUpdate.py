@@ -199,7 +199,7 @@ def textDraw(Text,Colour,LightCube,LightN,Pos,Scale):
                 
                 LightCube[Lx,Ly,j,0] = LED & Colour[0]
                 LightCube[Lx,Ly,j,1] = LED & Colour[1]
-                LightCube[Lx,Ly,j,1] = LED & Colour[2]
+                LightCube[Lx,Ly,j,2] = LED & Colour[2]
     
     
     return LightCube

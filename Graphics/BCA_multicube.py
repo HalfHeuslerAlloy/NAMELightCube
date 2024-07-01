@@ -7,7 +7,9 @@ Created on Mon Feb 19 15:38:58 2024
 
 import serial
 import serial.tools.list_ports
+
 import pixelFont
+import lightCubeUtil
 
 import numpy as np
 import tkinter as tk
@@ -341,7 +343,7 @@ class Window(tk.Frame):
         
         self.update()
         
-    
+
     def generateSim(self):
         
         global dT,Elements
@@ -768,6 +770,7 @@ def commControlThread(CommPortID,Pipe,LightN):
         print("connected to cube")
     except:
         cubePort = None
+        fig = plt.figure()
         print("Failed to connect to cube")
         
     Particles = []
@@ -775,9 +778,6 @@ def commControlThread(CommPortID,Pipe,LightN):
     if cubePort != None:
         # Clear command
         cubePort.write(bytearray(chr(0b01111111),'utf-8'))
-    else:
-        while True:
-            message = Pipe.recv()
             
     # Text scrolling
     currentText = ""
@@ -793,7 +793,8 @@ def commControlThread(CommPortID,Pipe,LightN):
             if type(message) == str:
                 if message == "#Clear":
                     # Send Clear command
-                    cubePort.write(bytearray(chr(0b11100001),'utf-8'))
+                    if cubePort != None:
+                        cubePort.write(bytearray(chr(0b11100001),'utf-8'))
                     LightCube = np.zeros([LightN[0],LightN[1],LightN[2],3],dtype="bool") # cube N*N*N*3 RGB
                     LightCubeOld = np.copy(LightCube)
                     
@@ -814,7 +815,7 @@ def commControlThread(CommPortID,Pipe,LightN):
         if currentText != "":
             LightCube = textDraw(currentText,[1,0,0], LightCube, LightN, int(textPos), textScale)
             #Increment and check if finsihed
-            textPos += 0.1
+            textPos += 1
             if textPos > LightN[0]*4:
                 currentText = ""
             
@@ -825,6 +826,16 @@ def commControlThread(CommPortID,Pipe,LightN):
         
         if cubePort != None:
             cubePort.write(bytearray(packet,'utf-8'))
+        else:
+            print("Virtual Cube instead")
+            fig.clear()
+            
+            fig,ax = lightCubeUtil.virtualLightCube(LightCube,fig)
+            
+            plt.pause(0.01)
+            
+            fig.show()
+            
     
 #####################################################
 #####################################################
@@ -1047,7 +1058,7 @@ def textDraw(Text,Colour,LightCube,LightN,Pos,Scale):
                 
                 LightCube[Lx,Ly,j,0] = LED & Colour[0]
                 LightCube[Lx,Ly,j,1] = LED & Colour[1]
-                LightCube[Lx,Ly,j,1] = LED & Colour[2]
+                LightCube[Lx,Ly,j,2] = LED & Colour[2]
     
     
     return LightCube
