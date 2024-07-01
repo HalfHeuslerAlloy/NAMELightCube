@@ -725,7 +725,7 @@ def commControlThread(CommPortID,Pipe,LightN):
 #####################################################
 #####################################################
 
-    
+
 def outputCube(Particles,LightCube,LightN,DrawPriority):
     
     global SurfaceOnly
@@ -832,6 +832,7 @@ def outputCube(Particles,LightCube,LightN,DrawPriority):
 def drawLineCube(P1,P2,Col,DrawPri):
     
     global LightCube,LightN,DrawPriority
+    
     N = int(np.linalg.norm(P2-P1)*max(LightN)*2) # Number of sample points
     if N==0:
         return
@@ -901,30 +902,6 @@ def textDraw(Text,Colour,LightCube,LightN,Pos,Scale):
 
 ################################################
 ################################################            
-
-def Send(port,lightCube):
-    
-    framepacket = chr(0b10000000) # start with the reset character
-    
-    for k in range(32):
-        for j in range(8):
-            for i in range(4):
-                
-                char = ( 0b01000000 |
-                        lightCube[2*i,j,k,0] << 0 |
-                        lightCube[2*i,j,k,1] << 1 |
-                        lightCube[2*i,j,k,2] << 2 |
-                        lightCube[2*i+1,j,k,0] << 3 |
-                        lightCube[2*i+1,j,k,1] << 4 |
-                        lightCube[2*i+1,j,k,2] << 5
-                        )
-                
-                framepacket += chr(char)
-    
-    
-    port.write(bytearray(framepacket,'utf-8'))
-
-
 
 
 def getUpdatedVoxels(NewFrame,OldFrame):

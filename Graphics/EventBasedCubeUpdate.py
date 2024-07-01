@@ -114,11 +114,13 @@ def testSpeed(commPortID):
         
         Str = input("next line: ")
         
+        #Str = ""
+        
         if len(Str) > 0:
             N = 0
             Col = 0
             cube[:,:,:,:] = False
-            textScroll(Str,[1,0,0],cube,cubeSize,1)
+            textScroll(Str,[1,0,0],cube,cubeSize,2)
         else:
             cube[:,:,:,:] = False
             if cubeSize[0] == 24:
@@ -154,8 +156,8 @@ def testSpeed(commPortID):
 
 def textScroll(Text,Colour,LightCube,LightN,Scale):
     global cube, oldCube, cubePort
-    for Pos in range(-10*len(Text)*Scale,LightN[0]*4):
-        cube = textDraw(Text,[1,0,0],LightCube,[16,16,16],Pos,1)
+    for Pos in range(-9*(len(Text))*Scale,LightN[0]*4):
+        cube = textDraw(Text,[1,0,0],LightCube,[16,16,16],Pos,Scale)
         updateCube()
         time.sleep(0.05)
         oldCube = np.copy(cube)
@@ -172,10 +174,10 @@ def textDraw(Text,Colour,LightCube,LightN,Pos,Scale):
         Chr = Text[len(Text) - Tn - 1]
         FontMap = pixelFont.font8x8_basic[ord(Chr)]
         
-        for i in range(8):
+        for i in range(int(8*Scale)):
             
             # Calculate position along path
-            Pathn = (Tn * 10 + i ) * Scale + Pos
+            Pathn = (Tn * 9 * Scale + i ) + Pos
             
             if Pathn < 0 or Pathn > len(Pathx) - 1:
                 continue
@@ -183,12 +185,16 @@ def textDraw(Text,Colour,LightCube,LightN,Pos,Scale):
             Lx = Pathx[Pathn]
             Ly = Pathy[Pathn]
             
-            for j in range(8):
-                LED = bool( FontMap[7-j] & (1 << (7-i)) ) #get i'th,j'th pixel
+            for j in range(int(8*Scale)):
                 
-                LightCube[Lx,Ly,j*Scale,0] = LED & Colour[0]
-                LightCube[Lx,Ly,j*Scale,1] = LED & Colour[1]
-                LightCube[Lx,Ly,j*Scale,1] = LED & Colour[2]
+                fx = int(i / Scale)
+                fy = int(j / Scale)
+                
+                LED = bool( FontMap[7-fy] & (1 << (7-fx)) ) #get i'th,j'th pixel
+                
+                LightCube[Lx,Ly,j,0] = LED & Colour[0]
+                LightCube[Lx,Ly,j,1] = LED & Colour[1]
+                LightCube[Lx,Ly,j,1] = LED & Colour[2]
     
     
     return LightCube
