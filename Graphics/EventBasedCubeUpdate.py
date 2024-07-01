@@ -170,6 +170,11 @@ def textDraw(Text,Colour,LightCube,LightN,Pos,Scale):
     Pathx = list(range(0,LightN[0]-1)) + (LightN[0]-1)*[LightN[0]-1] + list(range(LightN[0]-1,0,-1)) + (LightN[0]-1)*[0]
     Pathy = (LightN[0]-1)*[0] + list(range(0,LightN[0]-1)) + (LightN[0]-1)*[LightN[0]-1] + list(range(LightN[0]-1,0,-1))
     
+    if LightN[0] != 16:
+        temp = Pathy
+        Pathy = Pathx
+        Pathx = temp
+    
     for Tn in range(len(Text)):
         Chr = Text[len(Text) - Tn - 1]
         FontMap = pixelFont.font8x8_basic[ord(Chr)]

@@ -482,6 +482,17 @@ class Window(tk.Frame):
                                                             Element[3]
                                                             )
         
+    def KeypadPredefined(self):
+        """
+        Sets the mass and energy toi predefined values
+
+        Returns
+        -------
+        None.
+
+        """
+        pass
+        
     
     def update(self):
         global dT, UpdateCanvas, cubePort, LightCube
