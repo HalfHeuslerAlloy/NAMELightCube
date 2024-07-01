@@ -329,6 +329,12 @@ class Window(tk.Frame):
         master.bind("a",self.annealSim)
         
         #############################
+        #### Idle Animation key bindings ########
+        #############################
+        
+        master.bind("z",self.idleText)
+        
+        #############################
         
         self.PreviosTime = time.time()
         self.Steps = 0
@@ -548,7 +554,10 @@ class Window(tk.Frame):
             self.SpeedScale.set(40)
             self.MassScale.set(Mass3)
             
+    def idleText(self,event):
         
+        if event.char == "z":
+            self.PipeRecv.send("#Print P-NAME    P-NAME    P-NAME")
         
     
     def update(self):
@@ -773,6 +782,10 @@ def commControlThread(CommPortID,Pipe,LightN):
     # Text scrolling
     currentText = ""
     textPos = 0
+    if LightN[0] == 8:
+        textScale = 1
+    else:
+        textScale = 2
     
     while True:
         if Pipe.poll():
@@ -783,12 +796,28 @@ def commControlThread(CommPortID,Pipe,LightN):
                     cubePort.write(bytearray(chr(0b11100001),'utf-8'))
                     LightCube = np.zeros([LightN[0],LightN[1],LightN[2],3],dtype="bool") # cube N*N*N*3 RGB
                     LightCubeOld = np.copy(LightCube)
+                    
+                    #Clear text
+                    currentText = ""
+                    
                 if message[0:6] == "#Print":
-                    CurrentText = message[7:]
+                    currentText = message[7:]
+                    # for Pos in range(-9*(len(Text))*Scale,LightN[0]*4):
+                    # def textDraw(Text,Colour,LightCube,LightN,Pos,Scale):
+                    textPos = -9*(len(currentText))*textScale
             if type(message) == list:
                 Particles = message
         
         LightCube = outputCube(Particles, LightCube, LightN, DrawPriority)
+        
+        #Display Text Scroll
+        if currentText != "":
+            LightCube = textDraw(currentText,[1,0,0], LightCube, LightN, int(textPos), textScale)
+            #Increment and check if finsihed
+            textPos += 0.1
+            if textPos > LightN[0]*4:
+                currentText = ""
+            
         
         packet = getUpdatedVoxels(LightCube, LightCubeOld)
         
@@ -975,15 +1004,13 @@ def entryPointMarker(LightCube, Surfacelayer, Pattern):
 ################################################
 ################################################
 
-def textScroll(Text,Colour,LightCube,LightN,Scale):
-    global cube, oldCube, cubePort
-    for Pos in range(-9*(len(Text))*Scale,LightN[0]*4):
-        LightCube = textDraw(Text,[1,0,0],LightCube,[16,16,16],Pos,Scale)
-        time.sleep(0.05)
-        oldCube = np.copy(cube)
-    return LightCube
-
-        
+# def textScroll(Text,Colour,LightCube,LightN,Scale):
+#     global cube, oldCube, cubePort
+#     for Pos in range(-9*(len(Text))*Scale,LightN[0]*4):
+#         LightCube = textDraw(Text,[1,0,0],LightCube,[16,16,16],Pos,Scale)
+#         time.sleep(0.05)
+#         oldCube = np.copy(cube)
+#     return LightCube
 
 
 def textDraw(Text,Colour,LightCube,LightN,Pos,Scale):
