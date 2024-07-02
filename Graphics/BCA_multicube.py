@@ -30,6 +30,8 @@ MinDelay = 0.01
 
 SurfaceOnly = False
 
+textSpeedGlobal = 0.5
+
 
 # cube is always 1 unit
 LightCubeSizes = [[8,8,32],[16,16,16],[24,24,32]]
@@ -764,7 +766,7 @@ class Window(tk.Frame):
 
 def commControlThread(CommPortID,Pipe,LightN):
     
-    global SurfaceOnly
+    global SurfaceOnly,textSpeedGlobal
     
     # cube is always 1 unit
     LightCube = np.zeros([LightN[0],LightN[1],LightN[2],3],dtype="bool") # cube N*N*N*3 RGB
@@ -833,7 +835,7 @@ def commControlThread(CommPortID,Pipe,LightN):
         if currentText != "":
             LightCube = textDraw(currentText,[1,0,0], LightCube, LightN, int(textPos), textScale)
             #Increment and check if finsihed
-            textPos += 0.5
+            textPos += textSpeedGlobal
             if textPos > LightN[0]*4:
                 currentText = ""
                 
