@@ -30,7 +30,7 @@ MinDelay = 0.01
 
 SurfaceOnly = False
 
-textSpeedGlobal = 0.05
+textSpeedGlobal = 25
 
 SimulationMaxRuntime = 30 #seconds
 IdleDwellTime = 30 #seconds
