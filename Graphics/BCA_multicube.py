@@ -593,6 +593,7 @@ class Window(tk.Frame):
         
         if self.IdleEventChar != event.char:
             self.IdleEventChar = event.char
+            
             if event.char == "z":
                 self.LoopItem = "#Print P-NAME"
                 
@@ -607,11 +608,14 @@ class Window(tk.Frame):
             if event.char == "b":
                 self.LoopItem = "#CustomImg3"
             
+            print("Looping "+self.LoopItem)
             self.IdleLoopItem = True
             self.PipeRecv.send(self.LoopItem)
             
         else:
+            print("Stop Looping")
             self.IdleLoopItem = False
+            self.IdleEventChar = ''
     
     def idleTextRepeat(self,message):
         
@@ -964,12 +968,12 @@ def commControlThread(CommPortID,Pipe,LightN):
             #Increment and check if finsihed
             textPos += textSpeedGlobal
             if textPos > LightN[0]*4:
-                Pipe.send("#Finish"+currentText)
+                Pipe.send("#Finish")
                 currentText = ""
                 
         if type(ImgArr) != type(None):
             lightCubeUtil.imageDrawPerimeter(LightCube, ImgArr, ImgPos, ImgScale)   
-            ImgPos[0] = ImgPos[0] + 0.5
+            ImgPos[0] = ImgPos[0] + textSpeedGlobal
             if ImgPos[0] > LightN[0]*4:
                 Pipe.send("#Finish")
                 ImgArr = None
