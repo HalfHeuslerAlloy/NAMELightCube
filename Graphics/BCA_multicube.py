@@ -235,6 +235,9 @@ class Window(tk.Frame):
         
         self.IdleTime = time.perf_counter()
         self.IdleState = False
+        self.IdleLoopItem = False
+        self.LoopItem = ""
+        self.IdleEventChar = ""
         
         self.SimStartTime = time.perf_counter()
         
@@ -588,18 +591,32 @@ class Window(tk.Frame):
             
     def idleText(self,event):
         
-        if event.char == "z":
-            self.PipeRecv.send("#Print P-NAME    P-NAME    P-NAME")
+        if self.IdleEventChar != event.char:
+            self.IdleEventChar = event.char
+            if event.char == "z":
+                self.LoopItem = "#Print P-NAME"
+                
+            if event.char == "n":
+                self.LoopItem = "#Logo1"
             
-        if event.char == "n":
-            self.PipeRecv.send("#Logo1")
+            
+            if event.char == "c":
+                self.LoopItem = "#CustomImg1"
+            if event.char == "v":
+                self.LoopItem = "#CustomImg2"
+            if event.char == "b":
+                self.LoopItem = "#CustomImg3"
+            
+            self.IdleLoopItem = True
+            self.PipeRecv.send(self.LoopItem)
+            
+        else:
+            self.IdleLoopItem = False
+    
+    def idleTextRepeat(self,message):
         
-        if event.char == "c":
-            self.PipeRecv.send("#CustomImg1")
-        if event.char == "v":
-            self.PipeRecv.send("#CustomImg2")
-        if event.char == "b":
-            self.PipeRecv.send("#CustomImg3")
+        if self.IdleLoopItem and message == "#Finish":
+            self.PipeRecv.send(self.LoopItem)
         
     
     def update(self):
@@ -618,6 +635,15 @@ class Window(tk.Frame):
         if self.SimRunning and time.perf_counter() - self.SimStartTime > 30:
             self.haltSim()
             print("Simulation timeout")
+        
+        #Reset idle timing while looping animations
+        if self.IdleLoopItem:
+            self.IdleTime = time.perf_counter()
+        
+        if self.PipeRecv.poll():
+            message = self.PipeRecv.recv()
+            
+            self.idleTextRepeat(message)
         
         if self.SimRunning:
             
@@ -938,12 +964,14 @@ def commControlThread(CommPortID,Pipe,LightN):
             #Increment and check if finsihed
             textPos += textSpeedGlobal
             if textPos > LightN[0]*4:
+                Pipe.send("#Finish"+currentText)
                 currentText = ""
                 
         if type(ImgArr) != type(None):
             lightCubeUtil.imageDrawPerimeter(LightCube, ImgArr, ImgPos, ImgScale)   
             ImgPos[0] = ImgPos[0] + 0.5
             if ImgPos[0] > LightN[0]*4:
+                Pipe.send("#Finish")
                 ImgArr = None
             
         
