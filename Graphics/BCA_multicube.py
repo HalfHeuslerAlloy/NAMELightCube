@@ -32,6 +32,18 @@ SurfaceOnly = False
 
 textSpeedGlobal = 0.5
 
+SimulationMaxRuntime = 30 #seconds
+IdleDwellTime = 30 #seconds
+
+CustomImage1Filename = r"ImageArrays\TestPattern1.png"
+CustomImage1Size = [24,16] # Width Height
+
+CustomImage2Filename = r"ImageArrays\TestPattern2.png"
+CustomImage2Size = [24,16] # Width Height
+
+CustomImage3Filename = r"ImageArrays\TestPattern3.png"
+CustomImage3Size = [24,16] # Width Height
+
 
 # cube is always 1 unit
 LightCubeSizes = [[8,8,32],[16,16,16],[24,24,32]]
@@ -219,7 +231,12 @@ class Window(tk.Frame):
         
         self.SimRunning = False
         
+        self.Particles = []
+        
         self.IdleTime = time.perf_counter()
+        self.IdleState = False
+        
+        self.SimStartTime = time.perf_counter()
         
         self.Draw = tk.Canvas(master,width=self.Size,height=self.Size)
         self.Draw.grid(column = 0, row = 0,rowspan=2)
@@ -336,13 +353,16 @@ class Window(tk.Frame):
         #### Idle Animation key bindings ########
         #############################
         
+        #IDLE anaimations
         master.bind("z",self.idleText)
         master.bind("n",self.idleText)
         
-        #############################
+        #Custom images, useful for testing?
+        master.bind("c",self.idleText)
+        master.bind("v",self.idleText)
+        master.bind("b",self.idleText)
         
-        self.PreviosTime = time.time()
-        self.Steps = 0
+        #############################
         
         self.update()
         
@@ -411,6 +431,8 @@ class Window(tk.Frame):
         self.generateSim()
         
         
+        self.SimStartTime = time.perf_counter()
+        
         self.SimRunning = True
         print("Firing Ions")
     
@@ -443,6 +465,9 @@ class Window(tk.Frame):
         Trange = np.append(np.linspace(0,1,50),np.linspace(1,0,50))
         
         for T in Trange:
+            
+            # Reset idle timer whilst annealing
+            self.IdleTime = time.perf_counter()
             
             if self.AnnealStopEarly:
                 break
@@ -569,9 +594,18 @@ class Window(tk.Frame):
         if event.char == "n":
             self.PipeRecv.send("#Logo1")
         
+        if event.char == "c":
+            self.PipeRecv.send("#CustomImg1")
+        if event.char == "v":
+            self.PipeRecv.send("#CustomImg2")
+        if event.char == "b":
+            self.PipeRecv.send("#CustomImg3")
+        
     
     def update(self):
         global dT, UpdateCanvas, cubePort, LightCube
+        
+        global SimulationMaxRuntime, IdleDwellTime
         
         NewParticles = []
         
@@ -581,7 +615,15 @@ class Window(tk.Frame):
         
         Energy = 0
         
+        if self.SimRunning and time.perf_counter() - self.SimStartTime > 30:
+            self.haltSim()
+            print("Simulation timeout")
+        
         if self.SimRunning:
+            
+            # Reset Idle timer
+            self.IdleTime = time.perf_counter()
+            
             for P in self.Particles:
                 
                 M = P.move(self.Film,dT)
@@ -638,9 +680,46 @@ class Window(tk.Frame):
             
             for P in NewParticles:
                 self.Particles.append(P)
-            
+                
             if UpdateCanvas:
                 self.drawParticles()
+        
+        
+        ## Check Idle timer, 10 seconds
+        if time.perf_counter() - self.IdleTime > IdleDwellTime:
+            if self.IdleState == False:
+                
+                self.IdleState = True
+                print("IDLE")
+                # One time idle state actions
+                
+                # Start scrolling logo
+                self.PipeRecv.send("#Logo1")
+                
+                # TODO add anneal here?
+                
+        elif self.IdleState == True:
+            self.IdleState = False
+        
+        if self.IdleState:
+            # Repeat every update Idle State actives
+            
+            # Repeat every 20 seconds
+            if time.perf_counter() - self.IdleTime > 21+IdleDwellTime:
+                self.IdleTime += 20
+                self.PipeRecv.send("#Logo1")
+                
+            
+            #Randomly delete last particle in list
+            if np.random.rand()>0.5 and len(self.Particles) > 0:
+                
+                self.Draw.delete(self.Particles[-1].ID)
+                self.Particles.pop(-1)
+                
+                self.PipeRecv.send(self.Particles)
+                
+                if UpdateCanvas:
+                    self.drawParticles()
         
             
         self.after(5,self.update)
@@ -799,7 +878,16 @@ def commControlThread(CommPortID,Pipe,LightN):
     ImgPos = [0,0]
     ImgArr = None
     ImgScale = 2
-    NAMELogoArr = lightCubeUtil.imageConverted(r"C:\Users\eenmv\Documents\Github\NAMELightCube\Graphics\ImageArrays\NAMELogo2.png",74,24)
+    NAMELogoArr = lightCubeUtil.imageConverted(r"ImageArrays\NAMELogo2.png",74,24)
+    
+    global CustomImage1Filename,CustomImage1Size
+    global CustomImage2Filename,CustomImage2Size
+    global CustomImage3Filename,CustomImage3Size
+    
+    #Custom Images
+    CustomImg1 = lightCubeUtil.imageConverted(CustomImage1Filename,CustomImage1Size[0],CustomImage1Size[1])
+    CustomImg2 = lightCubeUtil.imageConverted(CustomImage2Filename,CustomImage2Size[0],CustomImage2Size[1])
+    CustomImg3 = lightCubeUtil.imageConverted(CustomImage3Filename,CustomImage3Size[0],CustomImage3Size[1])
     
     while True:
         if Pipe.poll():
@@ -823,7 +911,20 @@ def commControlThread(CommPortID,Pipe,LightN):
                 
                 if message == "#Logo1":
                     ImgArr = NAMELogoArr
-                    ImgPos = [-75,4]
+                    ImgPos = [-75,1]
+                    ImgScale = 1
+                
+                if message == "#CustomImg1":
+                    ImgArr = CustomImg1
+                    ImgPos = [CustomImg1.shape[0],0]
+                    ImgScale = 1
+                if message == "#CustomImg2":
+                    ImgArr = CustomImg2
+                    ImgPos = [CustomImg2.shape[0],0]
+                    ImgScale = 1
+                if message == "#CustomImg3":
+                    ImgArr = CustomImg3
+                    ImgPos = [CustomImg3.shape[0],0]
                     ImgScale = 1
                 
             if type(message) == list:
