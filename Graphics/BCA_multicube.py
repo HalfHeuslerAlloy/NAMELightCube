@@ -30,7 +30,7 @@ MinDelay = 0.01
 
 SurfaceOnly = False
 
-textSpeedGlobal = 0.5
+textSpeedGlobal = 0.05
 
 SimulationMaxRuntime = 30 #seconds
 IdleDwellTime = 30 #seconds
@@ -461,6 +461,8 @@ class Window(tk.Frame):
     
     def annealSim(self, event = None):
         
+        global SimConfig
+        
         self.haltSim()
         
         self.AnnealStopEarly = False
@@ -497,7 +499,7 @@ class Window(tk.Frame):
                     if self.Particles[Pn].Pos[2] > 0.75:
                         self.Particles[Pn].Pos[2] = 0.749
                 else:
-                    if Pn > 25:
+                    if Pn > SimConfig["Ion_N"]:
                         DelPar.append(Pn)
             
             for Pn in DelPar[-1::-1]:
@@ -877,6 +879,8 @@ def commControlThread(CommPortID,Pipe,LightN):
     
     global SurfaceOnly,textSpeedGlobal
     
+    FPS_timer = time.perf_counter()
+    
     # cube is always 1 unit
     LightCube = np.zeros([LightN[0],LightN[1],LightN[2],3],dtype="bool") # cube N*N*N*3 RGB
     LightCubeOld = np.copy(LightCube)
@@ -920,6 +924,11 @@ def commControlThread(CommPortID,Pipe,LightN):
     CustomImg3 = lightCubeUtil.imageConverted(CustomImage3Filename,CustomImage3Size[0],CustomImage3Size[1])
     
     while True:
+        
+        #Calculato frames per second
+        FPS = time.perf_counter() - FPS_timer
+        FPS_timer = time.perf_counter()
+        
         if Pipe.poll():
             message = Pipe.recv()
             if type(message) == str:
@@ -966,14 +975,14 @@ def commControlThread(CommPortID,Pipe,LightN):
         if currentText != "":
             LightCube = textDraw(currentText,[1,0,0], LightCube, LightN, int(textPos), textScale)
             #Increment and check if finsihed
-            textPos += textSpeedGlobal
+            textPos += textSpeedGlobal * FPS
             if textPos > LightN[0]*4:
                 Pipe.send("#Finish")
                 currentText = ""
                 
         if type(ImgArr) != type(None):
             lightCubeUtil.imageDrawPerimeter(LightCube, ImgArr, ImgPos, ImgScale)   
-            ImgPos[0] = ImgPos[0] + textSpeedGlobal
+            ImgPos[0] = ImgPos[0] + textSpeedGlobal * FPS
             if ImgPos[0] > LightN[0]*4:
                 Pipe.send("#Finish")
                 ImgArr = None
@@ -1024,33 +1033,25 @@ def outputCube(Particles,LightCube,LightN,DrawPriority):
         j = int(Pos[1])
         k = int(Pos[2])
         
-        # pShape = [[0,0,0],[0,0,1],[0,1,0],[0,1,1],
-        #           [1,0,0],[1,0,1],[1,1,0],[1,1,1]]
+        pShape = [[0,0,0],[0,0,1],[0,1,0],[0,1,1],
+                  [1,0,0],[1,0,1],[1,1,0],[1,1,1]]
         
-        pShape = [[0,0,0]]
+        #pShape = [[0,0,0]]
         
-        if ( 0<=i<LightN[0] ) and ( 0<=j<LightN[1] ) and ( 0<=k<LightN[2] ):
-            if DrawPriority[i,j,k] < P.DrawPri: #Check is the draw priority is larger
-                if P.Col[0]>0.5:
-                    for S in pShape:
-                        LightCube[i+S[0],j+S[1],k+S[2],0] = True
-                else:
-                    for S in pShape:
-                        LightCube[i+S[0],j+S[1],k+S[2],0] = False
-                if P.Col[1]>0.5:
-                    for S in pShape:
-                        LightCube[i+S[0],j+S[1],k+S[2],1] = True
-                else:
-                    for S in pShape:
-                        LightCube[i+S[0],j+S[1],k+S[2],1] = False
-                if P.Col[2]>0.5:
-                    for S in pShape:
-                        LightCube[i+S[0],j+S[1],k+S[2],2] = True
-                else:
-                    for S in pShape:
-                        LightCube[i+S[0],j+S[1],k+S[2],2] = False
+        for S in pShape:
             
-                DrawPriority[i,j,k] = P.DrawPri
+            Lx = i + S[0]
+            Ly = j + S[1]
+            Lz = k + S[2]
+            
+            if ( 0<=Lx<LightN[0] ) and ( 0<=Ly<LightN[1] ) and ( 0<=Lz<LightN[2] ):
+                if DrawPriority[Lx,Ly,Lz] < P.DrawPri: #Check is the draw priority is larger
+                    
+                    LightCube[Lx,Ly,Lz,0] = bool(round(P.Col[0]))
+                    LightCube[Lx,Ly,Lz,1] = bool(round(P.Col[1]))
+                    LightCube[Lx,Ly,Lz,2] = bool(round(P.Col[2]))
+                
+                    DrawPriority[Lx,Ly,Lz] = P.DrawPri
         
         # Draw any trails for the particle
         if P.Trail:
@@ -1151,8 +1152,8 @@ def entryPointMarker(LightCube, Surfacelayer, Pattern):
     if Pattern == "center":
         Half = int(LightN/2)
         
-        for i in range(-1,2):
-            for j in range(-1,2):
+        for i in range(-2,2):
+            for j in range(-2,2):
                 #RGB - Blue
                 LightCube[Half+i,Half+j,Surfacelayer,0] = False
                 LightCube[Half+i,Half+j,Surfacelayer,1] = False
