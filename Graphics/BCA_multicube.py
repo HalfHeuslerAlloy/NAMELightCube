@@ -335,6 +335,7 @@ class Window(tk.Frame):
         #############################
         
         master.bind("z",self.idleText)
+        master.bind("n",self.idleText)
         
         #############################
         
@@ -521,6 +522,8 @@ class Window(tk.Frame):
 
         """
         
+        np.random.seed(12345)
+        
         #SpeedScale range 5 - 40
         #MassScale range 4-118
         
@@ -560,6 +563,9 @@ class Window(tk.Frame):
         
         if event.char == "z":
             self.PipeRecv.send("#Print P-NAME    P-NAME    P-NAME")
+            
+        if event.char == "n":
+            self.PipeRecv.send("#Logo1")
         
     
     def update(self):
@@ -787,6 +793,12 @@ def commControlThread(CommPortID,Pipe,LightN):
     else:
         textScale = 2
     
+    #Load Images
+    ImgPos = [0,0]
+    ImgArr = None
+    ImgScale = 2
+    NAMELogoArr = lightCubeUtil.CVSToImageArray(r"C:\Users\eenmv\Documents\Github\NAMELightCube\Graphics\ImageArrays\NAME_YellowDots1.txt")
+    
     while True:
         if Pipe.poll():
             message = Pipe.recv()
@@ -794,7 +806,7 @@ def commControlThread(CommPortID,Pipe,LightN):
                 if message == "#Clear":
                     # Send Clear command
                     if cubePort != None:
-                        cubePort.write(bytearray(chr(0b11100001),'utf-8'))
+                        cubePort.write(bytearray(chr(0b01111111),'utf-8'))
                     LightCube = np.zeros([LightN[0],LightN[1],LightN[2],3],dtype="bool") # cube N*N*N*3 RGB
                     LightCubeOld = np.copy(LightCube)
                     
@@ -806,6 +818,12 @@ def commControlThread(CommPortID,Pipe,LightN):
                     # for Pos in range(-9*(len(Text))*Scale,LightN[0]*4):
                     # def textDraw(Text,Colour,LightCube,LightN,Pos,Scale):
                     textPos = -9*(len(currentText))*textScale
+                
+                if message == "#Logo1":
+                    ImgArr = NAMELogoArr
+                    ImgPos = [-72,4]
+                    ImgScale = 2
+                
             if type(message) == list:
                 Particles = message
         
@@ -815,9 +833,15 @@ def commControlThread(CommPortID,Pipe,LightN):
         if currentText != "":
             LightCube = textDraw(currentText,[1,0,0], LightCube, LightN, int(textPos), textScale)
             #Increment and check if finsihed
-            textPos += 1
+            textPos += 0.5
             if textPos > LightN[0]*4:
                 currentText = ""
+                
+        if type(ImgArr) != type(None):
+            lightCubeUtil.imageDrawPerimeter(LightCube, ImgArr, ImgPos, ImgScale)   
+            ImgPos[0] = ImgPos[0] + 0.5
+            if ImgPos[0] > LightN[0]*4:
+                ImgArr = None
             
         
         packet = getUpdatedVoxels(LightCube, LightCubeOld)
@@ -827,12 +851,11 @@ def commControlThread(CommPortID,Pipe,LightN):
         if cubePort != None:
             cubePort.write(bytearray(packet,'utf-8'))
         else:
-            print("Virtual Cube instead")
             fig.clear()
             
             fig,ax = lightCubeUtil.virtualLightCube(LightCube,fig)
             
-            plt.pause(0.01)
+            plt.pause(0.05)
             
             fig.show()
             
@@ -992,22 +1015,13 @@ def entryPointMarker(LightCube, Surfacelayer, Pattern):
     
     if Pattern == "center":
         Half = int(LightN/2)
-        #RGB - Blue
-        LightCube[Half,Half,Surfacelayer,0] = False
-        LightCube[Half,Half,Surfacelayer,1] = False
-        LightCube[Half,Half,Surfacelayer,2] = True
         
-        LightCube[Half+1,Half,Surfacelayer,0] = False
-        LightCube[Half+1,Half,Surfacelayer,1] = False
-        LightCube[Half+1,Half,Surfacelayer,2] = True
-        
-        LightCube[Half,Half+1,Surfacelayer,0] = False
-        LightCube[Half,Half+1,Surfacelayer,1] = False
-        LightCube[Half,Half+1,Surfacelayer,2] = True
-        
-        LightCube[Half+1,Half+1,Surfacelayer,0] = False
-        LightCube[Half+1,Half+1,Surfacelayer,1] = False
-        LightCube[Half+1,Half+1,Surfacelayer,2] = True
+        for i in range(-1,2):
+            for j in range(-1,2):
+                #RGB - Blue
+                LightCube[Half+i,Half+j,Surfacelayer,0] = False
+                LightCube[Half+i,Half+j,Surfacelayer,1] = False
+                LightCube[Half+i,Half+j,Surfacelayer,2] = True
     
     return LightCube
 

@@ -91,8 +91,15 @@ def virtualLightCube(LightCube,fig):
     ax.set_ylim([0,LightCube.shape[1]])
     ax.set_zlim([0,LightCube.shape[2]])
     
+    #fig.show()
+    
     return fig, ax
 
+
+def commandLineVLC(LightCube):
+    fig = plt.figure()
+    fig, ax = virtualLightCube(LightCube,fig)
+    fig.show()
 
 
 ########################################
@@ -133,6 +140,95 @@ def getUpdatedVoxels(NewFrame,OldFrame):
                                 NewFrame[i,j,k,2] << 5 |
                                 k)
     return UpdatePacket
+
+########################################
+#######  Particle Rendering  ###########
+########################################
+
+
+def drawParticles(Particles,LightCube,LightN,DrawPriority):
+    
+    LightCube[:,:,:,:] = False #clear cube
+    DrawPriority[:,:,:] = 0 #Clear Draw Priority
+    
+    for P in Particles:
+        Pos = np.copy(P.Pos)
+        Pos[0] = np.round(Pos[0]*LightN[0] - 0.5)
+        Pos[1] = np.round(Pos[1]*LightN[1] - 0.5)
+        Pos[2] = np.round(Pos[2]*LightN[2] - 0.5)
+        
+        i = int(Pos[0])
+        j = int(Pos[1])
+        k = int(Pos[2])
+        
+        # pShape = [[0,0,0],[0,0,1],[0,1,0],[0,1,1],
+        #           [1,0,0],[1,0,1],[1,1,0],[1,1,1]]
+        
+        pShape = [[0,0,0]]
+        
+        if ( 0<=i<LightN[0] ) and ( 0<=j<LightN[1] ) and ( 0<=k<LightN[2] ):
+            if DrawPriority[i,j,k] < P.DrawPri: #Check is the draw priority is larger
+                if P.Col[0]>0.5:
+                    for S in pShape:
+                        LightCube[i+S[0],j+S[1],k+S[2],0] = True
+                else:
+                    for S in pShape:
+                        LightCube[i+S[0],j+S[1],k+S[2],0] = False
+                if P.Col[1]>0.5:
+                    for S in pShape:
+                        LightCube[i+S[0],j+S[1],k+S[2],1] = True
+                else:
+                    for S in pShape:
+                        LightCube[i+S[0],j+S[1],k+S[2],1] = False
+                if P.Col[2]>0.5:
+                    for S in pShape:
+                        LightCube[i+S[0],j+S[1],k+S[2],2] = True
+                else:
+                    for S in pShape:
+                        LightCube[i+S[0],j+S[1],k+S[2],2] = False
+            
+                DrawPriority[i,j,k] = P.DrawPri
+        
+        # Draw any trails for the particle
+        if P.Trail:
+            N = len(P.PastPos)
+            drawLineCube(P.Pos, P.PastPos[-1], P.Col, P.DrawPri)
+            for n in range(N-1):
+                drawLineCube(P.PastPos[n], P.PastPos[n+1], P.TrailCol, P.DrawPri)
+    
+    return LightCube
+
+
+def drawLineCube(LightCube,LightN,DrawPriority,P1,P2,Col,DrawPri):
+    
+    N = int(np.linalg.norm(P2-P1)*max(LightN)*2) # Number of sample points
+    if N==0:
+        return
+    for n in range(N+1):
+        
+        Pos = ( n/N * (P2-P1) + P1)
+        
+        Pos[0] = np.round(Pos[0]*LightN[0])
+        Pos[1] = np.round(Pos[1]*LightN[1])
+        Pos[2] = np.round(Pos[2]*LightN[2])
+        
+        i = int(Pos[0])
+        j = int(Pos[1])
+        k = int(Pos[2])
+        
+        #Check if in bounds
+        if ( 0<=i<LightN[0] ) and ( 0<=j<LightN[1] ) and ( 0<=k<LightN[2] ):
+            if DrawPriority[i,j,k] < DrawPri:
+                if Col[0]>0.5:
+                    LightCube[i,j,k,0] = True
+                if Col[1]>0.5:
+                    LightCube[i,j,k,1] = True
+                if Col[2]>0.5:
+                    LightCube[i,j,k,2] = True
+            
+                DrawPriority[i,j,k] = DrawPri
+                
+    return LightCube, DrawPriority
 
 
 ########################################
@@ -194,8 +290,65 @@ def boundaryBox(LightCube, surfacelayer,SurfaceOnly):
 ##########  Text Rendering  ############
 ########################################
 
-def textDraw(Text,Col,LightCube,LightN,Pos,Scale):
+def CVSToImageArray(filename):
+    Arr = np.genfromtxt(filename,dtype = 'int').astype('bool')
+    Arr = Arr.transpose()
+    ArrThird = int(Arr.shape[1]/3)
+    ImgArr = np.zeros([ Arr.shape[0], ArrThird, 3],dtype = 'bool')
+    
+    ImgArr[:,:,0] = Arr[:,0:ArrThird]
+    ImgArr[:,:,1] = Arr[:,ArrThird:ArrThird*2]
+    ImgArr[:,:,2] = Arr[:,ArrThird*2:ArrThird*3]
+    
+    return ImgArr
+
+def GIFToAnimateFrames(filename):
+    pass
+
+def imageDrawPerimeter(LightCube, ImgArr, Pos, Scale):
+    
+    LightN = LightCube.shape
+    
+    Pathx = list(range(0,LightN[0]-1)) + (LightN[0]-1)*[LightN[0]-1] + list(range(LightN[0]-1,0,-1)) + (LightN[0]-1)*[0]
+    Pathy = (LightN[0]-1)*[0] + list(range(0,LightN[0]-1)) + (LightN[0]-1)*[LightN[0]-1] + list(range(LightN[0]-1,0,-1))
+    
+    # 16x16x16 mirrored?
+    if LightN[0] != 16:
+        temp = Pathy
+        Pathy = Pathx
+        Pathx = temp
+    
+    for i in range(len(Pathx)):
+        Imgx = ImgArr.shape[0] - int( (i-Pos[0])/Scale)
+        
+        if Imgx<0 or Imgx>ImgArr.shape[0]-1:
+            continue
+        
+        Lx = Pathx[i]
+        Ly = Pathy[i] 
+        
+        for j in range(LightN[2]):
+            
+            Imgy = ImgArr.shape[1] - int( (j-Pos[1])/Scale)
+            
+            if Imgy<0 or Imgy>ImgArr.shape[1]-1:
+                continue
+            
+            LightCube[Lx,Ly,j,0] = ImgArr[Imgx,Imgy,0]
+            LightCube[Lx,Ly,j,1] = ImgArr[Imgx,Imgy,1]
+            LightCube[Lx,Ly,j,2] = ImgArr[Imgx,Imgy,2]
+
+    return LightCube
+            
+    
+
+########################################
+##########  Text Rendering  ############
+########################################
+
+def textDraw(LightCube,Text,Col,Pos,Scale):
     # Path: [0,0] -> [N,0] -> [N,N] -> [N,0] -> [0,0]
+    LightN = LightCube.shape
     Pathx = list(range(0,LightN[0]-1)) + (LightN[0]-1)*[LightN[0]-1] + list(range(LightN[0]-1,0,-1)) + (LightN[0]-1)*[0]
     Pathy = (LightN[0]-1)*[0] + list(range(0,LightN[0]-1)) + (LightN[0]-1)*[LightN[0]-1] + list(range(LightN[0]-1,0,-1))
     
@@ -211,7 +364,7 @@ def textDraw(Text,Col,LightCube,LightN,Pos,Scale):
         for i in range(int(8*Scale)):
             
             # Calculate position along path
-            Pathn = (Tn * 9 * Scale + i ) + Pos
+            Pathn = (Tn * 9 * Scale + i ) + Pos[0]
             
             if Pathn < 0 or Pathn > len(Pathx) - 1:
                 continue
@@ -226,9 +379,9 @@ def textDraw(Text,Col,LightCube,LightN,Pos,Scale):
                 
                 LED = bool( FontMap[7-fy] & (1 << (7-fx)) ) #get i'th,j'th pixel
                 
-                LightCube[Lx,Ly,j,0] = LED & Col[0]
-                LightCube[Lx,Ly,j,1] = LED & Col[1]
-                LightCube[Lx,Ly,j,2] = LED & Col[2]
+                LightCube[Lx,Ly,j+Pos[1],0] = LED & Col[0]
+                LightCube[Lx,Ly,j+Pos[1],1] = LED & Col[1]
+                LightCube[Lx,Ly,j+Pos[1],2] = LED & Col[2]
     
     
     return LightCube
