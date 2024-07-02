@@ -799,7 +799,7 @@ def commControlThread(CommPortID,Pipe,LightN):
     ImgPos = [0,0]
     ImgArr = None
     ImgScale = 2
-    NAMELogoArr = lightCubeUtil.CVSToImageArray(r"C:\Users\eenmv\Documents\Github\NAMELightCube\Graphics\ImageArrays\NAME_YellowDots1.txt")
+    NAMELogoArr = lightCubeUtil.imageConverted(r"C:\Users\eenmv\Documents\Github\NAMELightCube\Graphics\ImageArrays\NAMELogo2.png",74,24)
     
     while True:
         if Pipe.poll():
@@ -823,8 +823,8 @@ def commControlThread(CommPortID,Pipe,LightN):
                 
                 if message == "#Logo1":
                     ImgArr = NAMELogoArr
-                    ImgPos = [-72,4]
-                    ImgScale = 2
+                    ImgPos = [-75,4]
+                    ImgScale = 1
                 
             if type(message) == list:
                 Particles = message

@@ -10,6 +10,8 @@ import numpy as np
 
 import matplotlib.pyplot as plt
 
+from PIL import Image
+
 
 
 ########################################
@@ -290,8 +292,8 @@ def boundaryBox(LightCube, surfacelayer,SurfaceOnly):
 ##########  Text Rendering  ############
 ########################################
 
-def CVSToImageArray(filename):
-    Arr = np.genfromtxt(filename,dtype = 'int').astype('bool')
+def CVSToImageArray(Filename):
+    Arr = np.genfromtxt(Filename,dtype = 'int').astype('bool')
     Arr = Arr.transpose()
     ArrThird = int(Arr.shape[1]/3)
     ImgArr = np.zeros([ Arr.shape[0], ArrThird, 3],dtype = 'bool')
@@ -302,8 +304,55 @@ def CVSToImageArray(filename):
     
     return ImgArr
 
-def GIFToAnimateFrames(filename):
+def GIFToAnimateFrames(Filename):
     pass
+
+def imageConverted(Img,Width,Height):
+    """
+    Parameters
+    ----------
+    image : image to to converted to a WxH pix and 3 bit color.
+
+    Returns
+    -------
+    ImgArr
+
+    """
+    
+    #Filename or PIL image
+    if type(Img) == str:
+        Img = Image.open( Img , "r")
+        #Img = Img.rotate(90)
+        Img.load()
+        
+    
+    Data = np.asarray( Img, dtype="int32" )
+    
+    ImgArr = np.zeros([Width,Height,3],dtype ='bool')
+    
+    print(Data.shape)
+    
+    for W in range(Width):
+        for H in range(Height):
+            
+            
+            Rmean = np.mean( Data[ int(H*Data.shape[0]/Height):int((H+1)*Data.shape[0]/Height - 1),
+                                   int(W*Data.shape[1]/Width):int((W+1)*Data.shape[1]/Width - 1),
+                                   0] )
+            Gmean = np.mean( Data[ int(H*Data.shape[0]/Height):int((H+1)*Data.shape[0]/Height - 1),
+                                   int(W*Data.shape[1]/Width):int((W+1)*Data.shape[1]/Width - 1),
+                                   1] )
+            Bmean = np.mean( Data[ int(H*Data.shape[0]/Height):int((H+1)*Data.shape[0]/Height - 1),
+                                   int(W*Data.shape[1]/Width):int((W+1)*Data.shape[1]/Width - 1),
+                                   2] )
+            
+            ImgArr[W,H,0] = bool(round(Rmean/255))
+            ImgArr[W,H,1] = bool(round(Gmean/255))
+            ImgArr[W,H,2] = bool(round(Bmean/255))
+    
+    
+    
+    return ImgArr
 
 def imageDrawPerimeter(LightCube, ImgArr, Pos, Scale):
     
