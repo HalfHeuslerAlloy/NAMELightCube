@@ -458,6 +458,7 @@ class Window(tk.Frame):
         self.AnnealStopEarly = True
         
         self.PipeRecv.send("#Clear")
+        
     
     def annealSim(self, event = None):
         
@@ -938,6 +939,8 @@ def commControlThread(CommPortID,Pipe,LightN):
                         cubePort.write(bytearray(chr(0b01111111),'utf-8'))
                     LightCube = np.zeros([LightN[0],LightN[1],LightN[2],3],dtype="bool") # cube N*N*N*3 RGB
                     LightCubeOld = np.copy(LightCube)
+                    
+                    Particles = []
                     
                     #Clear text
                     currentText = ""
