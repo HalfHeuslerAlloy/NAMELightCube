@@ -459,7 +459,7 @@ class Window(tk.Frame):
         
         self.IdleTime = time.perf_counter()
         
-        self.PipeRecv.send("#Clear")
+        self.PipeRecv.send("#SoftClear")
         
     
     def annealSim(self, event = None):
@@ -948,6 +948,23 @@ def commControlThread(CommPortID,Pipe,LightN):
                     currentText = ""
                     ImgPos = [LightN[0]*5,1]
                     ImgArr = None
+                
+                if message == "#SoftClear":
+                    #Clear cube
+                    LightCube = np.zeros([LightN[0],LightN[1],LightN[2],3],dtype="bool") # cube N*N*N*3 RGB
+                    
+                    #Reset
+                    Particles = []
+                    
+                    #Clear text and images
+                    currentText = ""
+                    ImgPos = [LightN[0]*5,1]
+                    ImgArr = None
+                    
+                    LightCube = outputCube(Particles, LightCube, LightN, DrawPriority)
+                    
+                    #Set every 'LED' in the old frame exact opposite, force complete write of the cube
+                    LightCubeOld = np.bitwise_not(np.copy(LightCube))
                     
                 if message[0:6] == "#Print":
                     currentText = message[7:]
