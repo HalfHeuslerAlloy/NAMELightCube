@@ -457,6 +457,8 @@ class Window(tk.Frame):
         
         self.AnnealStopEarly = True
         
+        self.IdleTime = time.perf_counter()
+        
         self.PipeRecv.send("#Clear")
         
     
@@ -944,6 +946,8 @@ def commControlThread(CommPortID,Pipe,LightN):
                     
                     #Clear text
                     currentText = ""
+                    ImgPos = [LightN[0]*5,1]
+                    ImgArr = None
                     
                 if message[0:6] == "#Print":
                     currentText = message[7:]
@@ -955,6 +959,10 @@ def commControlThread(CommPortID,Pipe,LightN):
                     ImgArr = NAMELogoArr
                     ImgPos = [-75,1]
                     ImgScale = 1
+                
+                if message == "#TERMINATE":
+                    break
+                    
                 
                 if message == "#CustomImg1":
                     ImgArr = CustomImg1
@@ -1005,6 +1013,10 @@ def commControlThread(CommPortID,Pipe,LightN):
             plt.pause(0.05)
             
             fig.show()
+    
+    if cubePort != None:
+        print("Closing commport")
+        cubePort.close()
             
     
 #####################################################
@@ -1026,6 +1038,11 @@ def outputCube(Particles,LightCube,LightN,DrawPriority):
     
     LightCube = entryPointMarker(LightCube, surfacelayer, Pattern)
     
+    #pShape = [[0,0,0],[0,0,1],[0,1,0],[0,1,1],
+    #          [1,0,0],[1,0,1],[1,1,0],[1,1,1]]
+    
+    pShape = [[0,0,0]]
+    
     for P in Particles:
         Pos = np.copy(P.Pos)
         Pos[0] = np.round(Pos[0]*LightN[0] - 0.5)
@@ -1035,11 +1052,6 @@ def outputCube(Particles,LightCube,LightN,DrawPriority):
         i = int(Pos[0])
         j = int(Pos[1])
         k = int(Pos[2])
-        
-        pShape = [[0,0,0],[0,0,1],[0,1,0],[0,1,1],
-                  [1,0,0],[1,0,1],[1,1,0],[1,1,1]]
-        
-        #pShape = [[0,0,0]]
         
         for S in pShape:
             
@@ -1300,3 +1312,5 @@ if __name__=="__main__":
     root.title("Cube display")
 
     Sim.mainloop()
+    
+    Sim.PipeRecv.send("#TERMINATE")
