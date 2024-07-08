@@ -434,3 +434,57 @@ def textDraw(LightCube,Text,Col,Pos,Scale):
     
     
     return LightCube
+
+
+########################################
+########  Blender Rendering  ###########
+########################################
+
+def loadBlenderAnimation(Filename):
+    
+    Frames = []
+    
+    with open(Filename,'r') as File:
+        
+        for Line in File:
+            
+            Frame = []
+            
+            if Line[0] == "F":
+                continue
+            if Line.startswith("[]"):
+                Frame.append([])
+            
+            Points = Line[:-2].replace("[","").split("]")[:-1]
+            
+            print(Line)
+            
+            print(Points)
+            
+            for P in Points:
+                #Convert '0,1,2,0,0,0' to list of int's
+                
+                LED = []
+                for Str in P.split(","):
+                    if len(Str) == 0:
+                        continue
+                    LED.append(int(Str))
+                
+                
+                Frame.append(LED)
+            
+            Frames.append(Frame)
+        
+    return Frames
+
+def blenderDraw(LightCube,Frames,F):
+    
+    Frame = Frames[F]
+    
+    for LED in Frame:
+        
+        LightCube[LED[0],LED[1],LED[2],0] = bool(LED[3])
+        LightCube[LED[0],LED[1],LED[2],1] = bool(LED[4])
+        LightCube[LED[0],LED[1],LED[2],2] = bool(LED[5])
+    
+    return LightCube
