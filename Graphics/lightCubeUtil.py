@@ -457,10 +457,6 @@ def loadBlenderAnimation(Filename):
             
             Points = Line[:-2].replace("[","").split("]")[:-1]
             
-            print(Line)
-            
-            print(Points)
-            
             for P in Points:
                 #Convert '0,1,2,0,0,0' to list of int's
                 
@@ -478,8 +474,26 @@ def loadBlenderAnimation(Filename):
     return Frames
 
 def blenderDraw(LightCube,Frames,F):
+    """
+    Draw the selected frame
+
+    Parameters
+    ----------
+    LightCube : N,N,N,3 array of LED possibles.
+    Frames : Animiation sequence of all frames.
+    F : Frame to draw.
+
+    Returns
+    -------
+    LightCube : TYPE
+        DESCRIPTION.
+
+    """
     
     Frame = Frames[F]
+    
+    if Frame == [[]]:
+        return LightCube
     
     for LED in Frame:
         
