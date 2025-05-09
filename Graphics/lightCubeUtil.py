@@ -132,6 +132,8 @@ def getUpdatedVoxels(NewFrame,OldFrame):
             j_last = j
             k_last = k
             
+            #bits = [0,Startflag,Colour_RGB,5-0 position]
+            
             UpdatePacket += chr(0b01000000 |
                                 NewFrame[i,j,k,0] << 5 |
                                 i)
